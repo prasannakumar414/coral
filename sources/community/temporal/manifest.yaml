@@ -294,7 +294,7 @@ tables:
         type: Json
         nullable: true
         description: Schedule state including paused flag and notes.
-        expr: {kind: path, path: [info, spec]}
+        expr: {kind: path, path: [schedule, state]}
       - name: action
         type: Json
         nullable: true

@@ -41,7 +41,7 @@ If accessing Temporal Cloud workflow data via the gRPC-HTTP gateway, generate an
 ### Add the Source
 
 ```bash
-coral source add temporal
+coral source add --file sources/community/temporal/manifest.yaml
 ```
 
 When prompted, provide:
