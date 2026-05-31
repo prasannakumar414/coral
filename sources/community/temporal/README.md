@@ -1,20 +1,20 @@
 # Temporal
 
-Query Temporal workflow runtime data — namespaces, workflow executions, and schedules — via the Temporal HTTP API. Works with self-hosted Temporal Server (v1.24+) and Temporal Cloud namespace frontends.
+Query self-hosted Temporal Server workflow runtime data — namespaces, workflow executions, and schedules — via the Temporal HTTP API (v1.24+).
 
 ## Requirements
 
-- **Temporal Server v1.24 or later** with the HTTP gateway enabled (the HTTP frontend is separate from the gRPC frontend and typically runs on port 7243).
-- For **Temporal Cloud** namespace access: a Temporal Cloud API key with at least Namespace Read permission.
+- **Temporal Server v1.24 or later** with the HTTP API enabled (the HTTP API frontend is separate from the gRPC frontend and typically runs on port 7243).
 - For **open self-hosted clusters** (no auth): leave `TEMPORAL_API_KEY` unset.
+- For **auth-enabled clusters**: a bearer token from your cluster's authorization plugin.
 
-To confirm the HTTP gateway is reachable, run:
+To confirm the HTTP API is reachable, run:
 
 ```bash
 curl http://localhost:7243/api/v1/namespaces?pageSize=1
 ```
 
-A JSON response (even `{"namespaces":[]}`) confirms the gateway is up.
+A JSON response (even `{"namespaces":[]}`) confirms the HTTP API is up.
 
 ## Setup
 
@@ -23,20 +23,13 @@ A JSON response (even `{"namespaces":[]}`) confirms the gateway is up.
 Ensure the HTTP API frontend is enabled in your `temporal.yaml` config (or equivalent):
 
 ```yaml
-frontend:
-  httpPort: 7243
+services:
+  frontend:
+    rpc:
+      httpPort: 7243
 ```
 
 Restart the server if you changed this setting.
-
-### Temporal Cloud namespace frontend
-
-If accessing Temporal Cloud workflow data via the gRPC-HTTP gateway, generate an API key:
-
-1. Sign in to [Temporal Cloud](https://cloud.temporal.io).
-2. Click your avatar → **Profile settings** → **API keys**.
-3. Create an API key with at least **Namespace Read** permission.
-4. Copy the key secret.
 
 ### Add the Source
 
@@ -46,11 +39,9 @@ coral source add --file sources/community/temporal/manifest.yaml
 
 When prompted, provide:
 
-- `TEMPORAL_ADDRESS`: Base URL of the Temporal HTTP gateway. No trailing slash.
-  - Self-hosted: `http://localhost:7243`
-  - Remote self-hosted: `http://temporal.internal:7243`
-  - Temporal Cloud namespace gateway: use the HTTP endpoint provided by Temporal Cloud
-- `TEMPORAL_API_KEY` *(optional)*: Bearer token for authenticated clusters. Leave blank for open self-hosted clusters.
+- `TEMPORAL_ADDRESS`: Base URL of the Temporal HTTP API. Do not include a trailing slash.
+  - Examples: `http://localhost:7243`, `http://temporal.internal:7243`, `https://temporal.mycompany.com:7243`
+- `TEMPORAL_API_KEY` *(optional)*: Bearer token. Leave blank for open (unauthenticated) clusters.
 
 ### Verify Setup
 
@@ -86,7 +77,7 @@ Schedules in a Temporal namespace. Each row is one schedule that triggers workfl
 
 Useful for schedule inventory, cron expression review, next-trigger inspection, and identifying paused or broken schedules.
 
-Columns include: `namespace` (virtual), `schedule_id`, `state`, `action`, `spec`, `recent_actions`, `future_action_times`, `created_at`, `updated_at`.
+Columns include: `namespace` (virtual), `schedule_id`, `workflow_type`, `paused`, `notes`, `spec`, `recent_actions`, `future_action_times`.
 
 ## Authentication
 
@@ -156,8 +147,7 @@ LIMIT 20
 ### Schedule overview
 
 ```sql
-SELECT schedule_id, created_at, updated_at,
-       json_extract(action, '$.startWorkflow.workflowType.name') AS workflow_type
+SELECT schedule_id, workflow_type, paused, notes
 FROM temporal.schedules
 WHERE namespace = 'default'
 ORDER BY schedule_id
@@ -173,6 +163,26 @@ WHERE namespace = 'default'
 ORDER BY schedule_id
 ```
 
+### Paused schedules
+
+```sql
+SELECT schedule_id, workflow_type, notes
+FROM temporal.schedules
+WHERE namespace = 'default'
+  AND paused = true
+ORDER BY schedule_id
+```
+
+### Schedules by workflow type
+
+```sql
+SELECT workflow_type, COUNT(*) AS schedule_count
+FROM temporal.schedules
+WHERE namespace = 'default'
+GROUP BY workflow_type
+ORDER BY schedule_count DESC
+```
+
 ### Workflow count by task queue
 
 ```sql
@@ -181,6 +191,66 @@ FROM temporal.workflows
 WHERE namespace = 'default'
 GROUP BY task_queue, status
 ORDER BY task_queue, status
+```
+
+## Verification
+
+Add the source and verify it works against a running Temporal Server:
+
+```bash
+$ TEMPORAL_ADDRESS=http://localhost:7243 TEMPORAL_API_KEY="" coral source add --file sources/community/temporal/manifest.yaml
+Added source temporal (secrets: keychain)
+
+  ✓ temporal connected successfully
+  Secrets: keychain
+
+    temporal (10 tables)
+    ├─ activities
+    ├─ archived_workflows
+    ├─ batch_operations
+    ├─ namespaces
+    ├─ nexus_endpoints
+    ├─ nexus_operations
+    ├─ schedules
+    ├─ worker_deployments
+    ├─ workflow_rules
+    └─ ... and 1 more
+```
+
+### Query Namespaces
+
+```bash
+$ coral sql "SELECT name, state FROM temporal.namespaces LIMIT 5"
++-----------------+----------------------------+
+| name            | state                      |
++-----------------+----------------------------+
+| default         | NAMESPACE_STATE_REGISTERED |
+| temporal-system | NAMESPACE_STATE_REGISTERED |
++-----------------+----------------------------+
+```
+
+### Query Workflows
+
+```bash
+$ coral sql "SELECT workflow_id, workflow_type, task_queue, status FROM temporal.workflows WHERE namespace = 'default' LIMIT 3"
++---------------------------------------------+-----------------------+------------+-------------------------------------+
+| workflow_id                                 | workflow_type         | task_queue | status                              |
++---------------------------------------------+-----------------------+------------+-------------------------------------+
+| schedule_workflow_...-2026-05-30T08:26:00Z | SampleScheduleWorkflow | schedule   | WORKFLOW_EXECUTION_STATUS_COMPLETED |
+| schedule_workflow_...-2026-05-30T08:25:55Z | SampleScheduleWorkflow | schedule   | WORKFLOW_EXECUTION_STATUS_COMPLETED |
+| schedule_workflow_...-2026-05-30T08:25:50Z | SampleScheduleWorkflow | schedule   | WORKFLOW_EXECUTION_STATUS_COMPLETED |
++---------------------------------------------+-----------------------+------------+-------------------------------------+
+```
+
+### Query Schedules
+
+```bash
+$ coral sql "SELECT schedule_id, workflow_type, paused, notes FROM temporal.schedules WHERE namespace = 'default' LIMIT 5"
++-------------+---------------+--------+-------+
+| schedule_id | workflow_type | paused | notes |
++-------------+---------------+--------+-------+
++-------------+---------------+--------+-------+
+(No schedules in this cluster)
 ```
 
 ## Limits
