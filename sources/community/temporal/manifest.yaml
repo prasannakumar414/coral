@@ -43,15 +43,13 @@ auth:
       template: "Bearer {{input.TEMPORAL_API_KEY}}"
 
 test_queries:
+  # Core v1.24-safe validation path.
+  # Version/feature-gated tables are documented as optional/manual checks
+  # in README.md so default source tests remain portable.
   - SELECT name, state FROM temporal.namespaces LIMIT 1
   - SELECT workflow_id, workflow_type, status FROM temporal.workflows WHERE namespace = 'default' LIMIT 1
   - SELECT schedule_id, workflow_type, paused FROM temporal.schedules WHERE namespace = 'default' LIMIT 1
-  - SELECT activity_id, activity_type, status FROM temporal.activities WHERE namespace = 'default' LIMIT 1
   - SELECT job_id, state, start_time FROM temporal.batch_operations WHERE namespace = 'default' LIMIT 1
-  - SELECT operation_id, endpoint, service, status FROM temporal.nexus_operations WHERE namespace = 'default' LIMIT 1
-  - SELECT rule_id, description, create_time FROM temporal.workflow_rules WHERE namespace = 'default' LIMIT 1
-  - SELECT id, name, target_namespace, target_task_queue FROM temporal.nexus_endpoints LIMIT 1
-  - SELECT name, current_version, ramping_version FROM temporal.worker_deployments WHERE namespace = 'default' LIMIT 1
 
 tables:
   # ──────────────────────────────────────────────────────────────────────
@@ -1006,14 +1004,14 @@ tables:
         description: >-
           Build ID of the current deployment version that receives new
           workflow executions and tasks.
-        expr: {kind: path, path: [routingConfig, currentDeploymentVersion, buildId]}
+        expr: {kind: path, path: [routingConfig, currentVersion]}
       - name: ramping_version
         type: Utf8
         nullable: true
         description: >-
           Build ID of the ramping deployment version that receives a
           configured percentage of traffic.
-        expr: {kind: path, path: [routingConfig, rampingDeploymentVersion, buildId]}
+        expr: {kind: path, path: [routingConfig, rampingVersion]}
       - name: ramping_version_percentage
         type: Float64
         nullable: true

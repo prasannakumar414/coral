@@ -4,7 +4,7 @@ Query self-hosted Temporal Server workflow runtime data — namespaces, workflow
 
 ## Requirements
 
-- **Temporal Server v1.24 or later** with the HTTP API enabled (the HTTP API frontend is separate from the gRPC frontend and typically runs on port 7243). Core tables (namespaces, workflows, schedules, archived_workflows, batch_operations, nexus_endpoints) require v1.24+; newer tables require higher versions — see the Tables section for per-table details.
+- **Temporal Server v1.24 or later** with the HTTP API enabled (the HTTP API frontend is separate from the gRPC frontend and typically runs on port 7243). Default source tests cover a v1.24-safe core: namespaces, workflows, schedules, and batch_operations. Newer tables require higher versions or feature flags — see Tables and Optional or Manual Checks.
 - **Self-hosted clusters only.** Temporal Cloud namespace endpoints expose gRPC, not the workflow-service HTTP API, and are not supported by this source.
 - For **open self-hosted clusters** (no auth): leave `TEMPORAL_API_KEY` unset.
 - For **auth-enabled clusters**: a bearer token from your cluster's authorization plugin.
@@ -98,17 +98,17 @@ Batch operations (bulk terminate, cancel, signal) submitted against a namespace.
 
 Useful for auditing bulk actions and tracking progress of in-flight batch jobs.
 
-Columns include: `namespace` (virtual), `job_id`, `state`, `reason`, `start_time`, `close_time`.
+Columns include: `namespace` (virtual), `job_id`, `state`, `start_time`, `close_time`.
 
 ### `nexus_endpoints`
 
 Nexus endpoints registered on the cluster (cluster-scoped; no namespace filter required).
 
-> **Requires Temporal Server v1.24+**.
+> **Requires Temporal Server v1.27+**.
 
 Useful for Nexus topology discovery and endpoint configuration review.
 
-Columns include: `id`, `name`, `target_namespace`, `target_task_queue`, `description`.
+Columns include: `id`, `name`, `target_namespace`, `target_task_queue`, `target_external_url`, `url_prefix`, `version`, `created_time`, `last_modified_time`.
 
 ### `nexus_operations`
 
@@ -149,6 +149,72 @@ Worker deployments registered on the cluster for versioned rollouts. The `namesp
 Useful for deployment tracking, version rollout monitoring, and canary analysis.
 
 Columns include: `namespace` (virtual), `name`, `current_version`, `ramping_version`.
+
+## Optional or Manual Checks
+
+The following tables are supported but are not part of the default `coral source test temporal` path because they are version-gated or feature-gated.
+
+### v1.27+
+
+- `nexus_endpoints` (OperatorService):
+
+```sql
+SELECT id, name, target_namespace, target_task_queue
+FROM temporal.nexus_endpoints
+LIMIT 1
+```
+
+Unavailable behavior on older servers: endpoint may return 404/Unimplemented.
+
+- `worker_deployments` (requires `system.enableDeployments`):
+
+```sql
+SELECT name, current_version, ramping_version
+FROM temporal.worker_deployments
+WHERE namespace = 'default'
+LIMIT 1
+```
+
+Unavailable behavior when disabled/unsupported: endpoint may return 404/Unimplemented.
+
+### v1.28+
+
+- `workflow_rules`:
+
+```sql
+SELECT rule_id, description, create_time
+FROM temporal.workflow_rules
+WHERE namespace = 'default'
+LIMIT 1
+```
+
+Unavailable behavior on older servers: endpoint may return 501 method not supported or 404.
+
+### v1.31+
+
+- `activities` (requires `activity.enableStandalone`):
+
+```sql
+SELECT activity_id, activity_type, status
+FROM temporal.activities
+WHERE namespace = 'default'
+LIMIT 1
+```
+
+Unavailable behavior when disabled/unsupported: endpoint may return 404.
+
+### v1.32+
+
+- `nexus_operations`:
+
+```sql
+SELECT operation_id, endpoint, service, status
+FROM temporal.nexus_operations
+WHERE namespace = 'default'
+LIMIT 1
+```
+
+Unavailable behavior on older servers: endpoint may return 404.
 
 ## Authentication
 
