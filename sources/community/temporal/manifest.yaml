@@ -4,15 +4,19 @@ dsl_version: 3
 backend: http
 description: >-
   Query self-hosted Temporal Server workflow runtime data — namespaces,
-  workflow executions, and schedules — via the Temporal HTTP API (v1.24+).
+  workflow executions, schedules, and more — via the Temporal HTTP API.
+  Core tables (namespaces, workflows, schedules) require Temporal Server
+  v1.24+. Newer tables require higher versions; see the README for details.
 
 inputs:
   TEMPORAL_ADDRESS:
     kind: variable
     required: true
     hint: >-
-      Base URL of the Temporal HTTP API frontend. Requires Temporal Server
-      v1.24+ with the HTTP API enabled. Do not include a trailing slash.
+      Base URL of the self-hosted Temporal HTTP API frontend. Do not include
+      a trailing slash. Core tables require Temporal Server v1.24+ with the
+      HTTP API enabled; some tables require newer versions. Temporal Cloud
+      namespace endpoints are not supported.
       Examples: http://localhost:7243, http://temporal.internal:7243,
       https://temporal.mycompany.com:7243.
   TEMPORAL_API_KEY:
@@ -21,7 +25,9 @@ inputs:
     hint: >-
       Bearer token for Temporal API authentication. Leave blank for open
       (unauthenticated) self-hosted clusters. Required only when the cluster
-      is configured with an authorization plugin.
+      is configured with an authorization plugin. Temporal Cloud namespace
+      API keys are not supported — this source targets self-hosted Temporal
+      Server only.
     credential:
       methods:
         - type: source_config
@@ -190,7 +196,8 @@ tables:
           Workflow execution status. One of: WORKFLOW_EXECUTION_STATUS_RUNNING,
           WORKFLOW_EXECUTION_STATUS_COMPLETED, WORKFLOW_EXECUTION_STATUS_FAILED,
           WORKFLOW_EXECUTION_STATUS_CANCELED, WORKFLOW_EXECUTION_STATUS_TERMINATED,
-          WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW, WORKFLOW_EXECUTION_STATUS_TIMED_OUT.
+          WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW, WORKFLOW_EXECUTION_STATUS_TIMED_OUT,
+          WORKFLOW_EXECUTION_STATUS_PAUSED.
         expr: {kind: path, path: [status]}
       - name: start_time
         type: Timestamp
@@ -297,8 +304,8 @@ tables:
       - name: workflow_type
         type: Utf8
         nullable: true
-        description: Registered workflow type that this schedule triggers.
-        expr: {kind: path, path: [info, workflowType]}
+        description: Registered workflow type name that this schedule triggers.
+        expr: {kind: path, path: [info, workflowType, name]}
       - name: paused
         type: Boolean
         nullable: true
@@ -523,7 +530,8 @@ tables:
           Workflow execution status. One of: WORKFLOW_EXECUTION_STATUS_RUNNING,
           WORKFLOW_EXECUTION_STATUS_COMPLETED, WORKFLOW_EXECUTION_STATUS_FAILED,
           WORKFLOW_EXECUTION_STATUS_CANCELED, WORKFLOW_EXECUTION_STATUS_TERMINATED,
-          WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW, WORKFLOW_EXECUTION_STATUS_TIMED_OUT.
+          WORKFLOW_EXECUTION_STATUS_CONTINUED_AS_NEW, WORKFLOW_EXECUTION_STATUS_TIMED_OUT,
+          WORKFLOW_EXECUTION_STATUS_PAUSED.
         expr: {kind: path, path: [status]}
       - name: start_time
         type: Timestamp
