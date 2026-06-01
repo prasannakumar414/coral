@@ -1004,14 +1004,26 @@ tables:
         description: >-
           Build ID of the current deployment version that receives new
           workflow executions and tasks.
-        expr: {kind: path, path: [routingConfig, currentVersion]}
+        expr:
+          kind: coalesce
+          exprs:
+            - kind: path
+              path: [routingConfig, currentDeploymentVersion, buildId]
+            - kind: path
+              path: [routingConfig, currentVersion]
       - name: ramping_version
         type: Utf8
         nullable: true
         description: >-
           Build ID of the ramping deployment version that receives a
           configured percentage of traffic.
-        expr: {kind: path, path: [routingConfig, rampingVersion]}
+        expr:
+          kind: coalesce
+          exprs:
+            - kind: path
+              path: [routingConfig, rampingDeploymentVersion, buildId]
+            - kind: path
+              path: [routingConfig, rampingVersion]
       - name: ramping_version_percentage
         type: Float64
         nullable: true

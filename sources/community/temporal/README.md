@@ -150,6 +150,11 @@ Useful for deployment tracking, version rollout monitoring, and canary analysis.
 
 Columns include: `namespace` (virtual), `name`, `current_version`, `ramping_version`.
 
+The source reads both RoutingConfig schemas: legacy string fields
+(`currentVersion`, `rampingVersion`) and newer nested deployment-version
+objects (`currentDeploymentVersion.buildId`,
+`rampingDeploymentVersion.buildId`).
+
 ## Optional or Manual Checks
 
 The following tables are supported but are not part of the default `coral source test temporal` path because they are version-gated or feature-gated.
