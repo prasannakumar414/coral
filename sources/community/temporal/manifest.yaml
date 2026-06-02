@@ -4,30 +4,49 @@ dsl_version: 3
 backend: http
 description: >-
   Query self-hosted Temporal Server workflow runtime data — namespaces,
+<<<<<<< Updated upstream
   workflow executions, schedules, and more — via the Temporal HTTP API.
   Core tables (namespaces, workflows, schedules) require Temporal Server
   v1.24+. Newer tables require higher versions; see the README for details.
+=======
+  workflow executions, and schedules — via the Temporal HTTP API (v1.24+).
+>>>>>>> Stashed changes
 
 inputs:
   TEMPORAL_ADDRESS:
     kind: variable
     required: true
     hint: >-
+<<<<<<< Updated upstream
       Base URL of the self-hosted Temporal HTTP API frontend. Do not include
       a trailing slash. Core tables require Temporal Server v1.24+ with the
       HTTP API enabled; some tables require newer versions. Temporal Cloud
       namespace endpoints are not supported.
       Examples: http://localhost:7243, http://temporal.internal:7243,
       https://temporal.mycompany.com:7243.
+=======
+      Base URL of the Temporal HTTP API frontend. Requires Temporal Server
+      v1.24+ with the HTTP gateway enabled (httpPort, default 7243).
+      Do not include a trailing slash.
+      Example (local):  http://localhost:7243
+      Example (remote): http://temporal.internal:7243
+      Example (HTTPS):  https://temporal.mycompany.com:7243
+>>>>>>> Stashed changes
   TEMPORAL_API_KEY:
     kind: secret
     required: false
     hint: >-
       Bearer token for Temporal API authentication. Leave blank for open
+<<<<<<< Updated upstream
       (unauthenticated) self-hosted clusters. Required only when the cluster
       is configured with an authorization plugin. Temporal Cloud namespace
       API keys are not supported — this source targets self-hosted Temporal
       Server only.
+=======
+      (unauthenticated) self-hosted clusters — no Authorization header is
+      sent. Required only when the cluster is configured with an
+      authorization plugin (custom ClaimMapper or identity provider).
+>>>>>>> Stashed changes
     credential:
       methods:
         - type: source_config
