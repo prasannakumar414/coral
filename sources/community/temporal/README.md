@@ -1,6 +1,5 @@
 # Temporal
 
-<<<<<<< Updated upstream
 Query self-hosted Temporal Server workflow runtime data — namespaces, workflow executions, and schedules — via the Temporal HTTP API (self-hosted only).
 
 ## Requirements
@@ -9,15 +8,6 @@ Query self-hosted Temporal Server workflow runtime data — namespaces, workflow
 - **Self-hosted clusters only.** Temporal Cloud namespace endpoints expose gRPC, not the workflow-service HTTP API, and are not supported by this source.
 - For **open self-hosted clusters** (no auth): leave `TEMPORAL_API_KEY` unset.
 - For **auth-enabled clusters**: a bearer token from your cluster's authorization plugin.
-=======
-Query self-hosted Temporal Server workflow runtime data — namespaces, workflow executions, and schedules — via the Temporal HTTP API (v1.24+).
-
-## Requirements
-
-- **Temporal Server v1.24 or later** with the HTTP gateway enabled. The HTTP frontend is a separate process from the gRPC frontend and typically listens on port 7243.
-- HTTP and HTTPS base URLs are both supported for `TEMPORAL_ADDRESS`.
-- `TEMPORAL_API_KEY` is optional — omit it for open (unauthenticated) clusters.
->>>>>>> Stashed changes
 
 To confirm the HTTP API is reachable, run:
 
@@ -44,26 +34,6 @@ services:
 
 Restart the server if you changed this setting. For `temporal server start-dev`, pass `--http-port 7243` instead.
 
-<<<<<<< Updated upstream
-=======
-**Authentication on self-hosted clusters:**
-
-Self-hosted Temporal Server does not enforce authentication by default. Most development clusters and many production clusters run without a token requirement. In that case, leave `TEMPORAL_API_KEY` blank when prompted — the source omits the Authorization header and requests succeed without a token.
-
-If your cluster is configured with an authorization plugin (e.g., a custom `ClaimMapper` or an identity provider integration), provide the bearer token expected by that plugin as `TEMPORAL_API_KEY`.
-
-**Cloud-hosted self-managed clusters** (AWS, GCP, Azure) work the same way. Set `TEMPORAL_ADDRESS` to your cluster's HTTP endpoint with the correct scheme and port:
-
-- `https://temporal.mycompany.com:7243`
-- `http://10.0.1.50:7243`
-
-Ensure port 7243 (or whichever `httpPort` you configured) is accessible from the machine running Coral — open the relevant security group, firewall rule, or Kubernetes ingress as needed.
-
-### Temporal Cloud (SaaS)
-
-Temporal Cloud is not supported by this source. Use the `temporal_cloud_ops` source for Temporal Cloud account management (namespaces, users, service accounts, API keys).
-
->>>>>>> Stashed changes
 ### Add the Source
 
 ```bash
@@ -72,16 +42,9 @@ coral source add --file sources/community/temporal/manifest.yaml
 
 When prompted, provide:
 
-<<<<<<< Updated upstream
 - `TEMPORAL_ADDRESS`: Base URL of the Temporal HTTP API. Do not include a trailing slash.
   - Examples: `http://localhost:7243`, `http://temporal.internal:7243`, `https://temporal.mycompany.com:7243`
 - `TEMPORAL_API_KEY` *(optional)*: Bearer token. Leave blank for open (unauthenticated) clusters. **Temporal Cloud API keys are not supported** — this source targets self-hosted Temporal Server only.
-=======
-- `TEMPORAL_ADDRESS`: Base URL of the Temporal HTTP gateway. No trailing slash.
-  - Local dev: `http://localhost:7243`
-  - Self-hosted on a remote server: `http://temporal.internal:7243` or `https://temporal.mycompany.com:7243`
-- `TEMPORAL_API_KEY` *(optional)*: Leave blank for open self-hosted clusters. Required only for auth-enabled clusters.
->>>>>>> Stashed changes
 
 ### Verify Setup
 
@@ -268,7 +231,7 @@ When `TEMPORAL_API_KEY` is set, the source sends it as a bearer token on every r
 Authorization: Bearer <TEMPORAL_API_KEY>
 ```
 
-When `TEMPORAL_API_KEY` is left blank, no Authorization header is sent. This is the correct behavior for open self-hosted clusters, which do not validate the header at all.
+When `TEMPORAL_API_KEY` is left blank, the header is sent with an empty bearer value. Temporal Server accepts requests without a valid token on unauthenticated clusters.
 
 Most self-hosted Temporal Server deployments run without authentication. Only set `TEMPORAL_API_KEY` if your cluster is explicitly configured with an authorization plugin.
 
