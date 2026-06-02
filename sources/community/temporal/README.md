@@ -88,7 +88,7 @@ Closed workflow executions moved to the archival store. The `namespace` filter i
 
 Useful for long-term retention analysis and retrieving executions purged from the primary visibility store.
 
-Columns include: `namespace` (virtual), `workflow_id`, `run_id`, `workflow_type`, `task_queue`, `status`, `start_time`, `close_time`.
+Columns include: `namespace` (virtual), `workflow_id`, `run_id`, `workflow_type`, `task_queue`, `status`, `start_time`, `close_time`, `history_length`, `history_size_bytes`, `search_attributes`, `memo`.
 
 ### `batch_operations`
 
@@ -118,17 +118,17 @@ Nexus operations running within a namespace. The `namespace` filter is required.
 
 Useful for cross-namespace Nexus call tracing and status inspection.
 
-Columns include: `namespace` (virtual), `operation_id`, `endpoint`, `service`, `status`.
+Columns include: `namespace` (virtual), `operation_id`, `run_id`, `endpoint`, `service`, `operation`, `status`, `schedule_time`, `close_time`, `execution_duration`, `state_transition_count`, `search_attributes`.
 
 ### `workflow_rules`
 
 Automation rules that match and act on workflows within a namespace. The `namespace` filter is required.
 
-> **Requires Temporal Server v1.28+**.
+> **Requires Temporal Server v1.28+** with `frontend.workflowRulesAPIsEnabled` enabled.
 
 Useful for governance auditing and understanding automated workflow management policies.
 
-Columns include: `namespace` (virtual), `rule_id`, `description`, `create_time`.
+Columns include: `namespace` (virtual), `rule_id`, `description`, `visibility_query`, `actions`, `expiration_time`, `create_time`, `created_by_identity`.
 
 ### `activities`
 
@@ -138,7 +138,7 @@ Standalone activity executions within a namespace. The `namespace` filter is req
 
 Useful for monitoring standalone activity health and latency.
 
-Columns include: `namespace` (virtual), `activity_id`, `activity_type`, `status`.
+Columns include: `namespace` (virtual), `activity_id`, `run_id`, `activity_type`, `status`, `task_queue`, `schedule_time`, `close_time`, `execution_duration`, `state_transition_count`, `search_attributes`.
 
 ### `worker_deployments`
 
@@ -148,7 +148,7 @@ Worker deployments registered on the cluster for versioned rollouts. The `namesp
 
 Useful for deployment tracking, version rollout monitoring, and canary analysis.
 
-Columns include: `namespace` (virtual), `name`, `current_version`, `ramping_version`.
+Columns include: `namespace` (virtual), `name`, `create_time`, `current_version`, `ramping_version`, `ramping_version_percentage`, `current_version_changed_time`, `ramping_version_changed_time`.
 
 The source reads both RoutingConfig schemas: legacy string fields
 (`currentVersion`, `rampingVersion`) and newer nested deployment-version
@@ -184,7 +184,7 @@ Unavailable behavior when disabled/unsupported: endpoint may return 404/Unimplem
 
 ### v1.28+
 
-- `workflow_rules`:
+- `workflow_rules` (requires `frontend.workflowRulesAPIsEnabled`):
 
 ```sql
 SELECT rule_id, description, create_time
@@ -193,7 +193,7 @@ WHERE namespace = 'default'
 LIMIT 1
 ```
 
-Unavailable behavior on older servers: endpoint may return 501 method not supported or 404.
+Unavailable behavior when disabled/unsupported: endpoint may return 501 method not supported, Unimplemented, or 404.
 
 ### v1.31+
 
@@ -356,7 +356,7 @@ Added source temporal (secrets: keychain)
     ├─ schedules
     ├─ worker_deployments
     ├─ workflow_rules
-    └─ ... and 1 more
+    └─ workflows
 ```
 
 ### Query Namespaces
@@ -397,7 +397,7 @@ $ coral sql "SELECT schedule_id, workflow_type, paused, notes FROM temporal.sche
 
 ## Limits
 
-- Requires Temporal Server v1.24+ with the HTTP frontend (`httpPort`) enabled for core tables. Newer tables require higher versions; see the Tables section. Earlier versions do not expose the `/api/v1` HTTP gateway.
+- Requires Temporal Server v1.24+ with the HTTP frontend (`httpPort`) enabled for core tables. Newer tables require higher versions; see the Tables section. Earlier versions are unsupported and unverified by this source.
 - Temporal Cloud namespace endpoints are not supported. This source targets the self-hosted Temporal Server HTTP API only.
 - The `workflows` and `schedules` tables require the `namespace` filter. Omitting it causes a query error; use the `namespaces` table to discover available namespaces first.
 - Workflow payload contents (input, output, activity results) are not included in the `raw` column by default — the list API returns execution metadata only, not full history. Use the Temporal SDK or CLI to retrieve workflow histories.

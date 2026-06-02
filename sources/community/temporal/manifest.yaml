@@ -780,11 +780,13 @@ tables:
       List workflow rules configured in a Temporal namespace
       (ListWorkflowRules). Each row is one rule that can automatically act
       on workflows (e.g. pause an activity on start). Filter by namespace
-      (required).
+      (required). Requires Temporal Server v1.28+ with
+      frontend.workflowRulesAPIsEnabled enabled.
     guide: >-
       Always supply namespace: `SELECT rule_id, description, visibility_query,
       create_time FROM temporal.workflow_rules WHERE namespace = 'default'
-      LIMIT 20`.
+      LIMIT 20`. If the feature flag is disabled, the endpoint may return
+      Unimplemented.
     filters:
       - name: namespace
         required: true
@@ -800,6 +802,10 @@ tables:
       mode: cursor_query
       cursor_param: nextPageToken
       response_cursor_path: [nextPageToken]
+      page_size:
+        default: 100
+        max: 1000
+        query_param: pageSize
     columns:
       - name: namespace
         type: Utf8
