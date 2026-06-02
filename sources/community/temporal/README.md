@@ -4,7 +4,7 @@ Query self-hosted Temporal Server workflow runtime data — namespaces, workflow
 
 ## Requirements
 
-- **Temporal Server v1.24 or later** with the HTTP API enabled (the HTTP API frontend is separate from the gRPC frontend and typically runs on port 7243). Default source tests cover a v1.24-safe core: namespaces, workflows, schedules, and batch_operations. Newer tables require higher versions or feature flags — see Tables and Optional or Manual Checks.
+- **Temporal Server v1.24 or later** with the HTTP API enabled (the HTTP API frontend is separate from the gRPC frontend and typically runs on port 7243). The default source test validates namespace discovery only; namespace-scoped tables and version-gated tables are documented as manual checks below.
 - **Self-hosted clusters only.** Temporal Cloud namespace endpoints expose gRPC, not the workflow-service HTTP API, and are not supported by this source.
 - For **open self-hosted clusters** (no auth): leave `TEMPORAL_API_KEY` unset.
 - For **auth-enabled clusters**: a bearer token from your cluster's authorization plugin.
@@ -159,7 +159,32 @@ objects (`currentDeploymentVersion.buildId`,
 
 ## Optional or Manual Checks
 
-The following tables are supported but are not part of the default `coral source test temporal` path because they are version-gated or feature-gated.
+The following tables are not part of the default `coral source test temporal` path. Namespace-scoped tables require a namespace that varies per cluster, and newer tables are version-gated or feature-gated.
+
+### v1.24+ (namespace-scoped)
+
+These core tables work on any v1.24+ cluster but require a namespace filter. Replace `'default'` with a namespace from your cluster:
+
+```sql
+SELECT workflow_id, workflow_type, status
+FROM temporal.workflows
+WHERE namespace = 'default'
+LIMIT 1
+```
+
+```sql
+SELECT schedule_id, workflow_type, paused
+FROM temporal.schedules
+WHERE namespace = 'default'
+LIMIT 1
+```
+
+```sql
+SELECT job_id, state, start_time
+FROM temporal.batch_operations
+WHERE namespace = 'default'
+LIMIT 1
+```
 
 ### v1.27+
 
@@ -344,7 +369,10 @@ ORDER BY task_queue, status
 Add the source and verify it works against a running Temporal Server:
 
 ```bash
-$ TEMPORAL_ADDRESS=http://localhost:7243 TEMPORAL_API_KEY="" coral source add --file sources/community/temporal/manifest.yaml
+$ coral source add --file sources/community/temporal/manifest.yaml
+# When prompted:
+#   TEMPORAL_ADDRESS: http://localhost:7243
+#   TEMPORAL_API_KEY: (leave blank for open clusters)
 Added source temporal (secrets: keychain)
 
   ✓ temporal connected successfully
@@ -379,24 +407,23 @@ $ coral sql "SELECT name, state FROM temporal.namespaces LIMIT 5"
 
 ```bash
 $ coral sql "SELECT workflow_id, workflow_type, task_queue, status FROM temporal.workflows WHERE namespace = 'default' LIMIT 3"
-+---------------------------------------------+-----------------------+------------+-------------------------------------+
-| workflow_id                                 | workflow_type         | task_queue | status                              |
-+---------------------------------------------+-----------------------+------------+-------------------------------------+
-| schedule_workflow_...-2026-05-30T08:26:00Z | SampleScheduleWorkflow | schedule   | WORKFLOW_EXECUTION_STATUS_COMPLETED |
-| schedule_workflow_...-2026-05-30T08:25:55Z | SampleScheduleWorkflow | schedule   | WORKFLOW_EXECUTION_STATUS_COMPLETED |
-| schedule_workflow_...-2026-05-30T08:25:50Z | SampleScheduleWorkflow | schedule   | WORKFLOW_EXECUTION_STATUS_COMPLETED |
-+---------------------------------------------+-----------------------+------------+-------------------------------------+
++-------------------------------+-----------------+------------+-------------------------------------+
+| workflow_id                   | workflow_type   | task_queue | status                              |
++-------------------------------+-----------------+------------+-------------------------------------+
+| order-1234                    | OrderWorkflow   | orders     | WORKFLOW_EXECUTION_STATUS_COMPLETED |
+| payment-5678                  | PaymentWorkflow | payments   | WORKFLOW_EXECUTION_STATUS_RUNNING   |
++-------------------------------+-----------------+------------+-------------------------------------+
 ```
 
 ### Query Schedules
 
 ```bash
 $ coral sql "SELECT schedule_id, workflow_type, paused, notes FROM temporal.schedules WHERE namespace = 'default' LIMIT 5"
-+-----------------------+------------------------+--------+-------+
-| schedule_id           | workflow_type          | paused | notes |
-+-----------------------+------------------------+--------+-------+
-| coral-review-schedule | SampleScheduleWorkflow | false  |       |
-+-----------------------+------------------------+--------+-------+
++----------------+-----------------+--------+-------+
+| schedule_id    | workflow_type   | paused | notes |
++----------------+-----------------+--------+-------+
+| daily-cleanup  | CleanupWorkflow | false  |       |
++----------------+-----------------+--------+-------+
 ```
 
 ## Limits

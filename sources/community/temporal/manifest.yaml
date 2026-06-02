@@ -43,13 +43,12 @@ auth:
       template: "Bearer {{input.TEMPORAL_API_KEY}}"
 
 test_queries:
-  # Core v1.24-safe validation path.
-  # Version/feature-gated tables are documented as optional/manual checks
-  # in README.md so default source tests remain portable.
+  # Namespace discovery only — no namespace filter required, works on any
+  # self-hosted cluster regardless of which namespaces are configured.
+  # Namespace-scoped tables (workflows, schedules, batch_operations) are
+  # documented as manual checks in README.md because they require a
+  # namespace that varies per cluster.
   - SELECT name, state FROM temporal.namespaces LIMIT 1
-  - SELECT workflow_id, workflow_type, status FROM temporal.workflows WHERE namespace = 'default' LIMIT 1
-  - SELECT schedule_id, workflow_type, paused FROM temporal.schedules WHERE namespace = 'default' LIMIT 1
-  - SELECT job_id, state, start_time FROM temporal.batch_operations WHERE namespace = 'default' LIMIT 1
 
 tables:
   # ──────────────────────────────────────────────────────────────────────
@@ -802,10 +801,6 @@ tables:
       mode: cursor_query
       cursor_param: nextPageToken
       response_cursor_path: [nextPageToken]
-      page_size:
-        default: 100
-        max: 1000
-        query_param: pageSize
     columns:
       - name: namespace
         type: Utf8
