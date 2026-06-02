@@ -6,8 +6,7 @@ Query self-hosted Temporal Server workflow runtime data — namespaces, workflow
 
 - **Temporal Server v1.24 or later** with the HTTP API enabled (the HTTP API frontend is separate from the gRPC frontend and typically runs on port 7243). The default source test validates namespace discovery only; namespace-scoped tables and version-gated tables are documented as manual checks below.
 - **Self-hosted clusters only.** Temporal Cloud namespace endpoints expose gRPC, not the workflow-service HTTP API, and are not supported by this source.
-- For **open self-hosted clusters** (no auth): leave `TEMPORAL_API_KEY` unset.
-- For **auth-enabled clusters**: a bearer token from your cluster's authorization plugin.
+- **Open (unauthenticated) clusters only.** Auth-enabled clusters (those configured with an authorization plugin) are not supported until the source-spec DSL can express conditional auth.
 
 To confirm the HTTP API is reachable, run:
 
@@ -44,7 +43,6 @@ When prompted, provide:
 
 - `TEMPORAL_ADDRESS`: Base URL of the Temporal HTTP API. Do not include a trailing slash.
   - Examples: `http://localhost:7243`, `http://temporal.internal:7243`, `https://temporal.mycompany.com:7243`
-- `TEMPORAL_API_KEY` *(optional)*: Bearer token. Leave blank for open (unauthenticated) clusters. **Temporal Cloud API keys are not supported** — this source targets self-hosted Temporal Server only.
 
 ### Verify Setup
 
