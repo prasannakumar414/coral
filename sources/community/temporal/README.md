@@ -246,18 +246,6 @@ LIMIT 1
 
 Unavailable behavior on older servers: endpoint may return 404.
 
-## Authentication
-
-When `TEMPORAL_API_KEY` is set, the source sends it as a bearer token on every request:
-
-```text
-Authorization: Bearer <TEMPORAL_API_KEY>
-```
-
-When `TEMPORAL_API_KEY` is left blank, the header is sent with an empty bearer value. Temporal Server accepts requests without a valid token on unauthenticated clusters.
-
-Most self-hosted Temporal Server deployments run without authentication. Only set `TEMPORAL_API_KEY` if your cluster is explicitly configured with an authorization plugin.
-
 ## Example Queries
 
 ### Namespace inventory
@@ -370,11 +358,9 @@ Add the source and verify it works against a running Temporal Server:
 $ coral source add --file sources/community/temporal/manifest.yaml
 # When prompted:
 #   TEMPORAL_ADDRESS: http://localhost:7243
-#   TEMPORAL_API_KEY: (leave blank for open clusters)
-Added source temporal (secrets: keychain)
+Added source temporal
 
   ✓ temporal connected successfully
-  Secrets: keychain
 
     temporal (10 tables)
     ├─ activities
